@@ -13,18 +13,30 @@ Step 3) browse it in your browser:
 
 That's it!
 ## Gestures in this demo
-1) Mouse cursor
-  open your hand flat, and fingers put together
-2) Move object
-  open your hand flat, and fingers extended
-3) left mouse button pressed
-  open your hand flat and fingers extended, with your index finger press down
-4) left mouse button click
-  open your hand flat and fingers extended, with your index finger click motion
-5) rotate
-  fingers put together, with your index finger or whole palm circle around for a while
-6) zooming
-  fingers put together,with your thumb finger and index finger put together or oppositive direction
+
+### 1) Mouse cursor
+
+    open your hand flat, and fingers put together
+  
+### 2) Move object
+
+    open your hand flat, and fingers extended
+  
+### 3) left mouse button pressed
+
+    open your hand flat and fingers extended, with your index finger press down
+  
+### 4) left mouse button click
+
+    open your hand flat and fingers extended, with your index finger click motion
+  
+### 5) rotate
+
+    fingers put together, with your index finger or whole palm circle around for a while
+  
+### 6) zooming
+
+    fingers put together,with your thumb finger and index finger put together or oppositive direction
 
 
   
