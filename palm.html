@@ -101,7 +101,7 @@ THE SOFTWARE.
   var holdDuration = 0;
   var FingerOpen = 0;
   canvas.width=1280;
-  canvas.height=800;
+  canvas.height=600;
   // create a rendering context
   var ctx = canvas.getContext("2d");
   document.body.style.cursor="move";
@@ -156,16 +156,15 @@ THE SOFTWARE.
     var parmDirection=hand.pitch();
     var pd1,pd2,pd3,pd4,zoomStrength;
     if (controller.frame(0).hand.palmVelocity &&
-        controller.frame(5).hand.palmVelocity &&
-        controller.frame(10).hand.palmVelocity &&
-        controller.frame(15).hand.palmVelocity){
+        controller.frame(1).hand.palmVelocity &&
+        controller.frame(2).hand.palmVelocity &&
+        controller.frame(3).hand.palmVelocity){
       pd1=controller.frame(0).hand.palmVelocity[2];
-      pd2=controller.frame(5).hand.palmVelocity[2];
-      pd3=controller.frame(10).hand.palmVelocity[2];
-      pd4=controller.frame(10).hand.palmVelocity[2];
+      pd2=controller.frame(1).hand.palmVelocity[2];
+      pd3=controller.frame(2).hand.palmVelocity[2];
+      pd4=controller.frame(3).hand.palmVelocity[2];
       zoomStrength=(pd1+pd2+pd3+pd4)/4;
     }else zoomStrength=hand.palmVelocity[2];
-    console.log(zoomStrength/100);
     if (parmDirection>0.7){
       output_rad.innerHTML = "缩放";
       if (zoomStrength/100>0.1){
@@ -184,18 +183,20 @@ THE SOFTWARE.
         if (holdDuration>800) {
           output_deg.innerHTML+= "，食指按下"+holdDuration/1000+"秒";
           output_position.innerHTML = "移动:("+ canvasX + "," + canvasY+")";
+          ctx.clearRect(0,0,1280,600);
           ctx.beginPath();
           //ctx.beginPath();
           ctx.fillStyle="#0000ff";
-          ctx.arc(canvasX,canvasY,3,0,2*Math.PI);
+          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
           ctx.fill();
 
         }else{
           output_position.innerHTML = "光标:("+ canvasX + "," + canvasY+")";
+          ctx.clearRect(0,0,1280,600);
           ctx.beginPath();
           //ctx.beginPath();
           ctx.fillStyle="#ff0000";
-          ctx.arc(canvasX,canvasY,3,0,2*Math.PI);
+          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
           ctx.stroke();
 
         }
@@ -205,7 +206,7 @@ THE SOFTWARE.
           ctx.beginPath();
           //ctx.beginPath();
           ctx.fillStyle="#0000ff";
-          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
+          ctx.arc(canvasX,canvasY,20,0,2*Math.PI);
           ctx.fill();
           pressStartTime =0;
           pressDuration = 0;
