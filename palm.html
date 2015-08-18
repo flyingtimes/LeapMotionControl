@@ -57,18 +57,29 @@ THE SOFTWARE.
         bottom: 80px;
         cursor: pointer;
       }
-
+      #progress {
+        background: #005d98;
+        position: fixed;
+        bottom: 0;
+        left: ;
+        height: 10px;
+        width: 0%;
+      }
+    /*
       canvas{
         z-index: -1;
       }
+      */
     </style>
 
   </head>
 
   <body>
+    <canvas id="leap-demo"></canvas>
     <div id=output_rad></div>
     <div id=output_deg></div>
     <div id=output_position></div>
+    <div id=progress></div>
   </body>
 
   <script type="text/javascript">
@@ -78,7 +89,10 @@ THE SOFTWARE.
 	*****************************************************/
 	var output_rad = document.getElementById('output_rad'),
 	  output_deg = document.getElementById('output_deg'),
-		output_position = document.getElementById('output_position');
+		output_position = document.getElementById('output_position'),
+    progress = document.getElementById("progress"),
+    canvas = document.getElementById("leap-demo");
+
 
   window.TO_DEG = 180 / Math.PI;
   var pressStartTime = 0;
@@ -86,10 +100,20 @@ THE SOFTWARE.
   var pressDuration =0;
   var holdDuration = 0;
   var FingerOpen = 0;
-	// Set up the controller:
-	var controller = Leap.loop({background: true,enableGestures:true}, {
+  canvas.width=1280;
+  canvas.height=800;
+  // create a rendering context
+  var ctx = canvas.getContext("2d");
+  document.body.style.cursor="move";
 
+	// Set up the controller:
+	var controller = Leap.loop({background: true,enableGestures:true},{
+
+    //style.cursor.left=100;
+    //style.cursor.bottom=200;
     hand: function(hand){
+      var myframe = controller.frame(0);
+      var interactionBox = myframe.interactionBox;
       var a=hand.indexFinger.proximal.direction();
       var b=hand.middleFinger.proximal.direction();
       var c=hand.thumb.dipPosition;
@@ -125,20 +149,64 @@ THE SOFTWARE.
         }
       }
     //output_position.innerHTML = "";
-    var canvasX = hand.stabilizedPalmPosition[0];
-    var canvasY = hand.stabilizedPalmPosition[1];
 
-    if (FingerOpen){
+    var normalizedPosition = interactionBox.normalizePoint(hand.stabilizedPalmPosition, true);
+    var canvasX = normalizedPosition[0]*1280;
+    var canvasY = (1-normalizedPosition[1])*800;
+    var parmDirection=hand.pitch();
+    var pd1,pd2,pd3,pd4,zoomStrength;
+    if (controller.frame(0).hand.palmVelocity &&
+        controller.frame(5).hand.palmVelocity &&
+        controller.frame(10).hand.palmVelocity &&
+        controller.frame(15).hand.palmVelocity){
+      pd1=controller.frame(0).hand.palmVelocity[2];
+      pd2=controller.frame(5).hand.palmVelocity[2];
+      pd3=controller.frame(10).hand.palmVelocity[2];
+      pd4=controller.frame(10).hand.palmVelocity[2];
+      zoomStrength=(pd1+pd2+pd3+pd4)/4;
+    }else zoomStrength=hand.palmVelocity[2];
+    console.log(zoomStrength/100);
+    if (parmDirection>0.7){
+      output_rad.innerHTML = "缩放";
+      if (zoomStrength/100>0.1){
+        progress.style.background ="#005d98";
+        progress.style.width = Math.round(zoomStrength/100*8) + '%';
+      }else if (zoomStrength/100<-0.1){
+        progress.style.background ="#0000FF";
+        progress.style.width = Math.round(-zoomStrength/100*8) + '%';
+      }else {
+        progress.style.width = '0%';
+      }
+    }else output_rad.innerHTML="";
+    if (FingerOpen && parmDirection<0.7){
+        progress.style.width = '0%';
         output_deg.innerHTML = "手指张开";
         if (holdDuration>800) {
           output_deg.innerHTML+= "，食指按下"+holdDuration/1000+"秒";
-
           output_position.innerHTML = "移动:("+ canvasX + "," + canvasY+")";
+          ctx.beginPath();
+          //ctx.beginPath();
+          ctx.fillStyle="#0000ff";
+          ctx.arc(canvasX,canvasY,3,0,2*Math.PI);
+          ctx.fill();
+
         }else{
           output_position.innerHTML = "光标:("+ canvasX + "," + canvasY+")";
+          ctx.beginPath();
+          //ctx.beginPath();
+          ctx.fillStyle="#ff0000";
+          ctx.arc(canvasX,canvasY,3,0,2*Math.PI);
+          ctx.stroke();
+
         }
+
         if (pressDuration>100 && pressDuration<800){
           output_rad.innerHTML= " 单击"+pressDuration/1000+"秒";
+          ctx.beginPath();
+          //ctx.beginPath();
+          ctx.fillStyle="#0000ff";
+          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
+          ctx.fill();
           pressStartTime =0;
           pressDuration = 0;
         }
@@ -149,24 +217,26 @@ THE SOFTWARE.
         pressStartTime = 0;
         holdDuration = 0;
         output_deg.innerHTML = "手指并拢（不操作)";
-        if (hand.pinchStrength>0.3){
-          output_rad.innerHTML = "缩放:"+hand.pinchStrength;
-        }else
-        output_rad.innerHTML= "";
+
 
       }
       //progress.style.width = angle * 100 + '%';
 	   }
+
   });
 
   controller.on("gesture", function(gesture){
   //... handle gesture object
     if (FingerOpen==0){
-        if (gesture.type == "circle" && gesture.state=='update')
+        if (gesture.type == "circle" && gesture.state=='update'){
             output_position.innerHTML= "旋转";
+            ctx.save();
+            ctx.rotate(Math.PI/180*5);
+          }
         if (gesture.type == "circle" && gesture.state=="stop")
             output_position.innerHTML= "";
     }
+
   });
 
 	/*********************************************************
