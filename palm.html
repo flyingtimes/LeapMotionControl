@@ -22,7 +22,10 @@ THE SOFTWARE.
   <head>
     <meta charset="UTF-8">
     <title>Finger Angle</title>
+    <!--
     <script src="lib/three.js"></script>
+  -->
+    <script src="lib/three.min.js"></script>
     <script src="lib/leap-0.6.2.js"></script>
     <script src="lib/leap-plugins-0.1.6.1.js"></script>
     <script src="lib/leap.rigged-hand-0.1.4.min.js"></script>
@@ -75,11 +78,13 @@ THE SOFTWARE.
   </head>
 
   <body>
-    <canvas id="leap-demo"></canvas>
+    <div id=threecanvas></div>
+    <div id="abc"><div>
     <div id=output_rad></div>
     <div id=output_deg></div>
     <div id=output_position></div>
     <div id=progress></div>
+      <div id='mycursor' style='position:absolute;left:0;top:0;width:1280px;height:600px;background:transparent;font-size:40px;font-weight:bold;color:red;z-index:10;'>*</div>
   </body>
 
   <script type="text/javascript">
@@ -91,7 +96,7 @@ THE SOFTWARE.
 	  output_deg = document.getElementById('output_deg'),
 		output_position = document.getElementById('output_position'),
     progress = document.getElementById("progress"),
-    canvas = document.getElementById("leap-demo");
+    mycursor = document.getElementById("mycursor");
 
 
   window.TO_DEG = 180 / Math.PI;
@@ -100,11 +105,14 @@ THE SOFTWARE.
   var pressDuration =0;
   var holdDuration = 0;
   var FingerOpen = 0;
-  canvas.width=1280;
-  canvas.height=600;
-  // create a rendering context
-  var ctx = canvas.getContext("2d");
-  document.body.style.cursor="move";
+
+  //document.body.style.cursor="move";
+  var myscene;
+  var mycamera;
+  var myrenderer;
+
+  var raycaster = new THREE.Raycaster();
+  var mymouse = new THREE.Vector2(), INTERSECTED;
 
 	// Set up the controller:
 	var controller = Leap.loop({background: true,enableGestures:true},{
@@ -165,8 +173,12 @@ THE SOFTWARE.
       pd4=controller.frame(3).hand.palmVelocity[2];
       zoomStrength=(pd1+pd2+pd3+pd4)/4;
     }else zoomStrength=hand.palmVelocity[2];
-    if (parmDirection>0.7){
+    if (parmDirection>0.8 && FingerOpen){
       output_rad.innerHTML = "缩放";
+      output_deg.innerHTML = "手指张开";
+      mycamera.position.z-=hand.palmVelocity[2]/20;
+      if (mycamera.position.z<100) mycamera.position.z=100;
+      if (mycamera.position.z>1000) mycamera.position.z=1000;
       if (zoomStrength/100>0.1){
         progress.style.background ="#005d98";
         progress.style.width = Math.round(zoomStrength/100*8) + '%';
@@ -177,39 +189,49 @@ THE SOFTWARE.
         progress.style.width = '0%';
       }
     }else output_rad.innerHTML="";
+    if (hand.roll()<-2){
+      mycamera.position.z = 300;
+      mycamera.position.x = 0;
+      mycamera.lookAt(new THREE.Vector3( 0, 0, 0 ));
+    }
     if (FingerOpen && parmDirection<0.7){
         progress.style.width = '0%';
         output_deg.innerHTML = "手指张开";
         if (holdDuration>800) {
           output_deg.innerHTML+= "，食指按下"+holdDuration/1000+"秒";
           output_position.innerHTML = "移动:("+ canvasX + "," + canvasY+")";
-          ctx.clearRect(0,0,1280,600);
-          ctx.beginPath();
-          //ctx.beginPath();
-          ctx.fillStyle="#0000ff";
-          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
-          ctx.fill();
-
+          mycamera.position.x-=hand.palmVelocity[0]/20*Math.cos(mycamera.rotation.z)-hand.palmVelocity[1]/20*Math.sin(mycamera.rotation.z);
+          mycamera.position.y-=hand.palmVelocity[1]/20*Math.cos(mycamera.rotation.z)+hand.palmVelocity[0]/20*Math.sin(mycamera.rotation.z);
+          if (mycamera.position.x<-1000) mycamera.position.x=-1000;
+          if (mycamera.position.y<-1000) mycamera.position.y=-1000;
+          if (mycamera.position.x>1000) mycamera.position.x=1000;
+          if (mycamera.position.y>1000) mycamera.position.y=1000;
+          console.log(mycamera.rotation.z);
         }else{
           output_position.innerHTML = "光标:("+ canvasX + "," + canvasY+")";
-          ctx.clearRect(0,0,1280,600);
-          ctx.beginPath();
-          //ctx.beginPath();
-          ctx.fillStyle="#ff0000";
-          ctx.arc(canvasX,canvasY,10,0,2*Math.PI);
-          ctx.stroke();
-
+          mycursor.style.left = canvasX;
+          mycursor.style.top = canvasY;
         }
 
         if (pressDuration>100 && pressDuration<800){
           output_rad.innerHTML= " 单击"+pressDuration/1000+"秒";
-          ctx.beginPath();
-          //ctx.beginPath();
-          ctx.fillStyle="#0000ff";
-          ctx.arc(canvasX,canvasY,20,0,2*Math.PI);
-          ctx.fill();
+
           pressStartTime =0;
           pressDuration = 0;
+          mymouse.x = ( canvasX / 1280 ) * 2 - 1;
+					mymouse.y = -( canvasY / 600 ) * 2 + 1;
+          raycaster.setFromCamera(mymouse,mycamera);
+			      	var intersects = raycaster.intersectObjects( myscene.children );
+			        if ( intersects.length > 0 ) {
+                myrenderer.clear();
+				        if ( INTERSECTED != intersects[ 0 ].object ) {
+				          if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+				          INTERSECTED = intersects[ 0 ].object;
+				          INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+				          INTERSECTED.material.emissive.setHex( 0xff0000 );
+				        }
+                myrenderer.render(myscene, mycamera);
+				    }
         }
         // Convert the normalized coordinates to span the canvas
 
@@ -229,10 +251,9 @@ THE SOFTWARE.
   controller.on("gesture", function(gesture){
   //... handle gesture object
     if (FingerOpen==0){
-        if (gesture.type == "circle" && gesture.state=='update'){
-            output_position.innerHTML= "旋转";
-            ctx.save();
-            ctx.rotate(Math.PI/180*5);
+        if (gesture.type == "circle" && gesture.state=='update' ){
+              output_position.innerHTML= "旋转";
+              mycamera.rotation.z+=0.01;
           }
         if (gesture.type == "circle" && gesture.state=="stop")
             output_position.innerHTML= "";
@@ -283,7 +304,7 @@ THE SOFTWARE.
 
 
 	  controller.use('riggedHand', {
-		scale: 1,
+		scale: 0.8,
 		boneColors: function (boneMesh, leapHand){
 		  if ((boneMesh.name.indexOf('Finger_') == 0) ) {
         if ((boneMesh.name.indexOf('Finger_10') == 0) ||
@@ -300,9 +321,55 @@ THE SOFTWARE.
 	  });
 
     var camera = controller.plugins.riggedHand.camera;
+    myscene = controller.plugins.riggedHand.scene;
     camera.position.set(-8,8,20);
     camera.lookAt(new THREE.Vector3(0,0,0));
+    mycamera=camera;
 	};
 	visualizeHand(Leap.loopController);
+
+  window.onload = function() {
+    var fov = 45;
+    var near = 0.1;
+    var far = 1000;
+    var ii = 0;
+    myscene = new THREE.Scene();
+    var renderer = new THREE.WebGLRenderer();
+    myrenderer=renderer;
+    var rotate_anglex = 0;
+    var rotate_angley = 0;
+    var camera_pos = 500;
+    mycamera = new THREE.PerspectiveCamera(fov, 1280 / 600, near, far);
+    mycamera.position.z = 300;
+    mycamera.position.x = 0;
+    mycamera.lookAt(new THREE.Vector3( 0, 0, 0 ));
+    myscene.add(mycamera);
+    renderer.setSize(1280, 600);
+    document.getElementById("threecanvas").appendChild(renderer.domElement);
+    var light = new THREE.DirectionalLight( 0xffffff, 1 );
+    light.position.set( 1, 1, 1 ).normalize();
+    myscene.add( light );
+    var geometry = new THREE.BoxGeometry( 20, 20, 20 );
+    for ( var i = 0; i < 1500; i ++ ) {
+        var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+        object.position.x = Math.random() * 800 - 400;
+        object.position.y = Math.random() * 800 - 400;
+        object.position.z = 0;
+        object.scale.x = Math.random() + 0.5;
+        object.scale.y = Math.random() + 0.5;
+        object.scale.z = Math.random() + 0.5;
+        myscene.add( object );
+    }
+    function animate() {
+      render();
+      requestAnimationFrame(animate);
+    }
+    function render() {
+      renderer.clear();
+      renderer.render(myscene, mycamera);
+    }
+    animate();
+  }
+
   </script>
 </html>
